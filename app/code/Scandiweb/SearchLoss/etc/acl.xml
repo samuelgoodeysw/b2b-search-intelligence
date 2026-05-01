@@ -1,12 +1,9 @@
 <?xml version="1.0"?>
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="urn:magento:framework:Acl/etc/acl.xsd">
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Acl/etc/acl.xsd">
     <acl>
         <resources>
             <resource id="Magento_Backend::admin">
-                <resource id="Magento_Reports::report">
-                    <resource id="Scandiweb_SearchLoss::searchloss" title="B2B Search Intelligence" sortOrder="90"/>
-                </resource>
+                <resource id="Scandiweb_SearchLoss::dashboard" title="B2B Search Intelligence" sortOrder="95"/>
             </resource>
         </resources>
     </acl>
