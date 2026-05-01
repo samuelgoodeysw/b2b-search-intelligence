@@ -1207,3 +1207,124 @@ function b2bStatusClass(string $status): string
 </script>
 <!-- B2B_CUSTOMER_AUTOCOMPLETE_END -->
 
+
+<!-- B2B_INCOMPLETE_VALUE_TOOLTIP_START -->
+<style>
+    .b2b-kpi-tooltip-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        width: 17px;
+        height: 17px;
+        margin-left: 6px;
+        border-radius: 50%;
+        border: 1px solid #9fb3c8;
+        color: #3f5f7f;
+        background: #f7fbff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+        cursor: help;
+        vertical-align: middle;
+    }
+
+    .b2b-kpi-tooltip-icon::after {
+        content: attr(data-tooltip);
+        display: none;
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 10px);
+        transform: translateX(-50%);
+        z-index: 10000;
+        width: 300px;
+        max-width: 70vw;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #172b4d;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.45;
+        text-align: left;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.24);
+        white-space: normal;
+    }
+
+    .b2b-kpi-tooltip-icon::before {
+        content: "";
+        display: none;
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 4px);
+        transform: translateX(-50%);
+        z-index: 10001;
+        border-width: 6px 6px 0 6px;
+        border-style: solid;
+        border-color: #172b4d transparent transparent transparent;
+    }
+
+    .b2b-kpi-tooltip-icon:hover::after,
+    .b2b-kpi-tooltip-icon:hover::before,
+    .b2b-kpi-tooltip-icon:focus::after,
+    .b2b-kpi-tooltip-icon:focus::before {
+        display: block;
+    }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    function ready(fn) {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", fn);
+        } else {
+            fn();
+        }
+    }
+
+    function normalise(value) {
+        return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    ready(function () {
+        var tooltipText = "Searches where Magento recorded the customer starting a search, but did not record the completed response. Calculated as incomplete searches x customer average item value. Directional only.";
+        var labels = ["Incomplete search value", "Potential value", "Potential Value"];
+        var elements = Array.prototype.slice.call(document.querySelectorAll("body *:not(script):not(style)"));
+
+        elements.forEach(function (element) {
+            if (element.querySelector && element.querySelector(".b2b-kpi-tooltip-icon")) {
+                return;
+            }
+
+            var directText = Array.prototype.slice.call(element.childNodes)
+                .filter(function (node) {
+                    return node.nodeType === Node.TEXT_NODE;
+                })
+                .map(function (node) {
+                    return node.textContent;
+                })
+                .join(" ");
+
+            directText = normalise(directText);
+
+            if (labels.indexOf(directText) === -1) {
+                return;
+            }
+
+            var tooltip = document.createElement("span");
+            tooltip.className = "b2b-kpi-tooltip-icon";
+            tooltip.setAttribute("data-tooltip", tooltipText);
+            tooltip.setAttribute("tabindex", "0");
+            tooltip.setAttribute("role", "button");
+            tooltip.setAttribute("aria-label", tooltipText);
+            tooltip.textContent = "?";
+
+            element.appendChild(tooltip);
+        });
+    });
+})();
+</script>
+<!-- B2B_INCOMPLETE_VALUE_TOOLTIP_END -->
+
