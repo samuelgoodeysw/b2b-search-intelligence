@@ -193,3 +193,64 @@ Do not reintroduce these until the focused product is stable:
 - workflow/assignment tooling
 
 Those belong to the broader Search Loss Audit product or a later phase.
+
+## Later backlog: Customer search aggregation
+
+Add an aggregated customer-level view.
+
+Current table shows individual logged-in search events.
+
+A later customer summary view should group events by customer so merchants can quickly see customer-level search patterns.
+
+Possible customer-level fields:
+
+- customer name
+- customer email
+- total searches
+- unresolved searches
+- completed searches
+- zero-result searches
+- searches with no matching cart or order
+- searches that led to cart
+- searches that led to order
+- most searched terms
+- recently searched terms
+- matched products
+- latest search date
+- latest unresolved search date
+
+Possible labels:
+
+- Customer Search Summary
+- Customer Intent Summary
+- Customer Search Trends
+- Account Search Intelligence
+
+Why this matters:
+
+B2B merchants often care about accounts, not just individual search terms.
+
+A grouped customer view could help answer:
+
+Which customers are repeatedly searching but not finding or buying?
+
+Which accounts are showing unresolved product intent?
+
+Which customers are searching for the same product families repeatedly?
+
+Which customers searched and later added or ordered matching items?
+
+Suggested timing:
+
+Do not build this before the focused event-level dashboard is stable.
+
+Build later after:
+
+- filters and exports are validated
+- demo flow is clean
+- recoverable value model is decided
+- customer-level grouping has a clear client/demo story
+
+Keep this read-only and diagnostic.
+
+Do not add customer follow-up workflows yet.
