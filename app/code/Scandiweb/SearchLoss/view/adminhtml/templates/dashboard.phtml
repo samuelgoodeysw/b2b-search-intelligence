@@ -485,7 +485,7 @@ function b2bStatusClass(string $status): string
             <div class="b2b-controls">
                 <div class="b2b-control-field">
                     <label for="b2b-search-filter">Customer</label>
-                    <input id="b2b-search-filter" type="search" list="b2b-customer-suggestions" placeholder="Search customer name or email">
+                    <input id="b2b-search-filter" type="search" list="b2b-customer-suggestions" placeholder="Search customer name or email" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-autocomplete="list">
                     <datalist id="b2b-customer-suggestions"></datalist>
                     <div id="b2b-customer-suggestion-menu" class="b2b-customer-suggestion-menu" hidden></div>
                 </div>
@@ -1019,6 +1019,12 @@ function b2bStatusClass(string $status): string
 
     ready(function () {
         var input = document.getElementById("b2b-search-filter");
+        if (input) {
+            input.setAttribute("autocomplete", "off");
+            input.setAttribute("autocorrect", "off");
+            input.setAttribute("autocapitalize", "none");
+            input.setAttribute("spellcheck", "false");
+        }
         var menu = document.getElementById("b2b-customer-suggestion-menu");
         var tbody = document.getElementById("b2b-search-table-body");
 
