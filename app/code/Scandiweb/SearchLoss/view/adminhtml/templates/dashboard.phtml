@@ -484,8 +484,9 @@ function b2bStatusClass(string $status): string
         <?php else: ?>
             <div class="b2b-controls">
                 <div class="b2b-control-field">
-                    <label for="b2b-search-filter">Search</label>
-                    <input id="b2b-search-filter" type="search" placeholder="Search customer, term, matched product, or SKU">
+                    <label for="b2b-search-filter">Customer</label>
+                    <input id="b2b-search-filter" type="search" list="b2b-customer-suggestions" placeholder="Search customer name or email">
+                    <datalist id="b2b-customer-suggestions"></datalist>
                 </div>
 
                 <div class="b2b-control-field">
@@ -550,7 +551,7 @@ function b2bStatusClass(string $status): string
                             <th>Matched item</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="b2b-search-table-body">
                         <?php foreach ($events as $event): ?>
                             <tr>
                                 <td class="b2b-customer">
@@ -602,3 +603,338 @@ function b2bStatusClass(string $status): string
         <?php endif; ?>
     </section>
 </div>
+
+
+<!-- B2B_SEARCH_INTELLIGENCE_FILTER_FIX_START -->
+<script>
+(function () {
+    "use strict";
+
+    function ready(fn) {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", fn);
+        } else {
+            fn();
+        }
+    }
+
+    function normalise(value) {
+        return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    }
+
+    function cleanText(value) {
+        return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function cellText(row, index) {
+        if (!row || !row.cells || !row.cells[index]) {
+            return "";
+        }
+
+        return cleanText(row.cells[index].innerText || row.cells[index].textContent || "");
+    }
+
+    function parseNumber(value) {
+        var match = String(value || "").match(/-?\d+(\.\d+)?/);
+        return match ? parseFloat(match[0]) : 0;
+    }
+
+    function parseDateValue(value) {
+        var cleaned = cleanText(value);
+        var parsed = Date.parse(cleaned);
+
+        if (!isNaN(parsed)) {
+            return parsed;
+        }
+
+        var match = cleaned.match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/);
+        if (match) {
+            parsed = Date.parse(match[1] + "T" + match[2]);
+            if (!isNaN(parsed)) {
+                return parsed;
+            }
+        }
+
+        return 0;
+    }
+
+    function csvEscape(value) {
+        var output = String(value || "").replace(/\r?\n|\r/g, " ").replace(/\s+/g, " ").trim();
+        return '"' + output.replace(/"/g, '""') + '"';
+    }
+
+    function findButtonByText(text) {
+        var target = normalise(text);
+        var buttons = Array.prototype.slice.call(document.querySelectorAll("button, a"));
+        return buttons.find(function (button) {
+            return normalise(button.innerText || button.textContent) === target;
+        }) || null;
+    }
+
+    ready(function () {
+        var searchInput = document.getElementById("b2b-search-filter");
+        var suggestionList = document.getElementById("b2b-customer-suggestions");
+        var lifecycleFilter = document.getElementById("b2b-lifecycle-filter");
+        var followFilter = document.getElementById("b2b-follow-filter");
+        var unresolvedFilter = document.getElementById("b2b-unresolved-filter");
+        var sortSelect = document.getElementById("b2b-sort-select");
+        var visibleCount = document.getElementById("b2b-visible-count");
+
+        var exportCurrent = document.getElementById("b2b-export-current") || findButtonByText("Export current view");
+        var exportUnresolved = document.getElementById("b2b-export-unresolved") || findButtonByText("Export unresolved");
+
+        var tbody = document.getElementById("b2b-search-table-body");
+        if (!tbody) {
+            tbody = document.querySelector("table tbody");
+            if (tbody) {
+                tbody.id = "b2b-search-table-body";
+            }
+        }
+
+        if (!tbody) {
+            return;
+        }
+
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr")).filter(function (row) {
+            return row.cells && row.cells.length >= 9;
+        });
+
+        function hydrateRows() {
+            rows.forEach(function (row) {
+                row.classList.add("b2b-search-row");
+
+                var customer = cellText(row, 0);
+                var lifecycle = cellText(row, 6);
+                var follow = cellText(row, 7);
+                var combinedStatus = normalise(lifecycle + " " + follow);
+
+                row.dataset.customer = normalise(customer);
+                row.dataset.customerDisplay = cleanText(customer.split("\n")[0] || customer);
+                row.dataset.lifecycle = normalise(lifecycle);
+                row.dataset.follow = normalise(follow);
+                row.dataset.started = String(parseDateValue(cellText(row, 2)));
+                row.dataset.response = String(parseNumber(cellText(row, 4)));
+                row.dataset.results = String(parseNumber(cellText(row, 5)));
+
+                if (!row.dataset.unresolved) {
+                    row.dataset.unresolved = (
+                        combinedStatus.indexOf("no later matching") !== -1 ||
+                        combinedStatus.indexOf("zero result") !== -1 ||
+                        combinedStatus.indexOf("completion not recorded") !== -1
+                    ) ? "1" : "0";
+                }
+            });
+        }
+
+        function buildCustomerSuggestions() {
+            if (!suggestionList) {
+                return;
+            }
+
+            var values = {};
+            rows.forEach(function (row) {
+                var customerCell = cellText(row, 0);
+                var name = cleanText(customerCell.split("\n")[0] || "");
+                var emailMatch = customerCell.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+
+                if (name) {
+                    values[name] = true;
+                }
+
+                if (emailMatch && emailMatch[0]) {
+                    values[emailMatch[0]] = true;
+                }
+            });
+
+            suggestionList.innerHTML = "";
+            Object.keys(values).sort(function (a, b) {
+                return a.localeCompare(b);
+            }).forEach(function (value) {
+                var option = document.createElement("option");
+                option.value = value;
+                suggestionList.appendChild(option);
+            });
+        }
+
+        function compareText(a, b) {
+            return String(a || "").localeCompare(String(b || ""));
+        }
+
+        function sortRows() {
+            var value = normalise(sortSelect ? sortSelect.value : "");
+
+            rows.sort(function (a, b) {
+                if (value.indexOf("oldest") !== -1) {
+                    return Number(a.dataset.started || 0) - Number(b.dataset.started || 0);
+                }
+
+                if (value.indexOf("response") !== -1 && (value.indexOf("low") !== -1 || value.indexOf("asc") !== -1)) {
+                    return Number(a.dataset.response || 0) - Number(b.dataset.response || 0);
+                }
+
+                if (value.indexOf("response") !== -1) {
+                    return Number(b.dataset.response || 0) - Number(a.dataset.response || 0);
+                }
+
+                if (value.indexOf("result") !== -1 && (value.indexOf("low") !== -1 || value.indexOf("asc") !== -1)) {
+                    return Number(a.dataset.results || 0) - Number(b.dataset.results || 0);
+                }
+
+                if (value.indexOf("result") !== -1) {
+                    return Number(b.dataset.results || 0) - Number(a.dataset.results || 0);
+                }
+
+                if (value.indexOf("customer") !== -1) {
+                    return compareText(a.dataset.customerDisplay, b.dataset.customerDisplay);
+                }
+
+                if (value.indexOf("lifecycle") !== -1) {
+                    return compareText(a.dataset.lifecycle, b.dataset.lifecycle);
+                }
+
+                if (value.indexOf("follow") !== -1) {
+                    return compareText(a.dataset.follow, b.dataset.follow);
+                }
+
+                if (value.indexOf("unresolved") !== -1) {
+                    return Number(b.dataset.unresolved || 0) - Number(a.dataset.unresolved || 0);
+                }
+
+                return Number(b.dataset.started || 0) - Number(a.dataset.started || 0);
+            });
+
+            rows.forEach(function (row) {
+                tbody.appendChild(row);
+            });
+        }
+
+        function applyFiltersAndSort() {
+            var customerNeedle = normalise(searchInput ? searchInput.value : "");
+            var lifecycleNeedle = normalise(lifecycleFilter ? lifecycleFilter.value : "");
+            var followNeedle = normalise(followFilter ? followFilter.value : "");
+            var unresolvedOnly = !!(unresolvedFilter && unresolvedFilter.checked);
+            var visible = 0;
+
+            rows.forEach(function (row) {
+                var keep = true;
+
+                if (customerNeedle && row.dataset.customer.indexOf(customerNeedle) === -1) {
+                    keep = false;
+                }
+
+                if (lifecycleNeedle && row.dataset.lifecycle.indexOf(lifecycleNeedle) === -1) {
+                    keep = false;
+                }
+
+                if (followNeedle && row.dataset.follow.indexOf(followNeedle) === -1) {
+                    keep = false;
+                }
+
+                if (unresolvedOnly && row.dataset.unresolved !== "1") {
+                    keep = false;
+                }
+
+                row.style.display = keep ? "" : "none";
+
+                if (keep) {
+                    visible += 1;
+                }
+            });
+
+            sortRows();
+
+            if (visibleCount) {
+                visibleCount.textContent = String(visible);
+            }
+        }
+
+        function exportCsv(onlyUnresolved) {
+            var headers = [
+                "Customer",
+                "Search term",
+                "Started",
+                "Completed",
+                "Response",
+                "Results",
+                "Lifecycle",
+                "Follow-through",
+                "Matched item"
+            ];
+
+            var exportRows = rows.filter(function (row) {
+                if (onlyUnresolved) {
+                    return row.dataset.unresolved === "1";
+                }
+
+                return row.style.display !== "none";
+            });
+
+            var lines = [headers.map(csvEscape).join(",")];
+
+            exportRows.forEach(function (row) {
+                var values = [];
+                for (var i = 0; i < headers.length; i += 1) {
+                    values.push(csvEscape(cellText(row, i)));
+                }
+                lines.push(values.join(","));
+            });
+
+            var blob = new Blob([lines.join("\n")], {type: "text/csv;charset=utf-8;"});
+            var link = document.createElement("a");
+            var url = URL.createObjectURL(blob);
+
+            link.href = url;
+            link.download = onlyUnresolved ? "b2b-search-intelligence-unresolved.csv" : "b2b-search-intelligence-current-view.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            window.setTimeout(function () {
+                URL.revokeObjectURL(url);
+            }, 1000);
+        }
+
+        hydrateRows();
+        buildCustomerSuggestions();
+
+        if (searchInput) {
+            searchInput.addEventListener("input", applyFiltersAndSort);
+        }
+
+        if (lifecycleFilter) {
+            lifecycleFilter.addEventListener("change", applyFiltersAndSort);
+        }
+
+        if (followFilter) {
+            followFilter.addEventListener("change", applyFiltersAndSort);
+        }
+
+        if (unresolvedFilter) {
+            unresolvedFilter.addEventListener("change", applyFiltersAndSort);
+        }
+
+        if (sortSelect) {
+            sortSelect.addEventListener("change", applyFiltersAndSort);
+        }
+
+        if (exportCurrent) {
+            exportCurrent.addEventListener("click", function (event) {
+                event.preventDefault();
+                applyFiltersAndSort();
+                exportCsv(false);
+            });
+        }
+
+        if (exportUnresolved) {
+            exportUnresolved.addEventListener("click", function (event) {
+                event.preventDefault();
+                exportCsv(true);
+            });
+        }
+
+        applyFiltersAndSort();
+    });
+})();
+</script>
+<!-- B2B_SEARCH_INTELLIGENCE_FILTER_FIX_END -->
+
