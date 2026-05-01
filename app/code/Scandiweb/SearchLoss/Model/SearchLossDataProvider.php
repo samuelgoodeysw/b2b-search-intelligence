@@ -68,6 +68,86 @@ class SearchLossDataProvider
         return $summary;
     }
 
+    public function getTopSearchIntelligenceActions(array $events = []): array
+    {
+        if (empty($events)) {
+            $events = $this->getLoggedInSearchIntelligence();
+        }
+
+        $actions = [
+            'completion_not_recorded' => [
+                'label' => 'Searches that may not have completed',
+                'count' => 0,
+                'priority' => 'High',
+                'summary' => 'Magento received the search request, but no completed response was recorded.',
+            ],
+            'zero_results' => [
+                'label' => 'Completed searches with zero results',
+                'count' => 0,
+                'priority' => 'High',
+                'summary' => 'The customer searched while logged in, Magento completed the response, but returned zero results.',
+            ],
+            'slow_searches' => [
+                'label' => 'Slow completed searches',
+                'count' => 0,
+                'priority' => 'Medium',
+                'summary' => 'Magento completed the search response, but server-side response time was high.',
+            ],
+            'unresolved_intent' => [
+                'label' => 'No later matching cart or order',
+                'count' => 0,
+                'priority' => 'High',
+                'summary' => 'No later cart or order item clearly matched the logged-in customer search.',
+            ],
+            'cart_followthrough' => [
+                'label' => 'Searches that led to cart activity',
+                'count' => 0,
+                'priority' => 'Positive signal',
+                'summary' => 'A later cart item appears to match the logged-in customer search.',
+            ],
+            'order_followthrough' => [
+                'label' => 'Searches that led to orders',
+                'count' => 0,
+                'priority' => 'Positive signal',
+                'summary' => 'A later order item appears to match the logged-in customer search.',
+            ],
+        ];
+
+        foreach ($events as $event) {
+            $lifecycle = (string)($event['lifecycleStatus'] ?? '');
+            $followThrough = (string)($event['commercialFollowThroughStatus'] ?? '');
+
+            if (str_contains($lifecycle, 'completion not recorded')) {
+                $actions['completion_not_recorded']['count']++;
+            }
+
+            if (str_contains($lifecycle, 'zero results')) {
+                $actions['zero_results']['count']++;
+            }
+
+            if (str_contains($lifecycle, 'slow')) {
+                $actions['slow_searches']['count']++;
+            }
+
+            if (!empty($event['isUnresolvedLoggedInSearch'])) {
+                $actions['unresolved_intent']['count']++;
+            }
+
+            if (str_contains($followThrough, 'cart item')) {
+                $actions['cart_followthrough']['count']++;
+            }
+
+            if (str_contains($followThrough, 'order')) {
+                $actions['order_followthrough']['count']++;
+            }
+        }
+
+        return array_values(array_filter($actions, static function (array $action): bool {
+            return (int)$action['count'] > 0;
+        }));
+    }
+
+
     public function getLoggedInSearchIntelligence(): array
     {
         $connection = $this->resource->getConnection();

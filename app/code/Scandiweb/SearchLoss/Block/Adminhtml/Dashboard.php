@@ -20,6 +20,11 @@ class Dashboard extends Template
         return $this->dataProvider->getLoggedInSearchIntelligence();
     }
 
+    public function getTopSearchIntelligenceActions(): array
+    {
+        return $this->dataProvider->getTopSearchIntelligenceActions($this->getLoggedInSearchIntelligence());
+    }
+
     public function getSummary(): array
     {
         return $this->dataProvider->getSummary($this->getLoggedInSearchIntelligence());
