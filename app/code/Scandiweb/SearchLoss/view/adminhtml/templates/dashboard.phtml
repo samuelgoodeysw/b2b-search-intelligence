@@ -487,6 +487,7 @@ function b2bStatusClass(string $status): string
                     <label for="b2b-search-filter">Customer</label>
                     <input id="b2b-search-filter" type="search" list="b2b-customer-suggestions" placeholder="Search customer name or email">
                     <datalist id="b2b-customer-suggestions"></datalist>
+                    <div id="b2b-customer-suggestion-menu" class="b2b-customer-suggestion-menu" hidden></div>
                 </div>
 
                 <div class="b2b-control-field">
@@ -937,4 +938,261 @@ function b2bStatusClass(string $status): string
 })();
 </script>
 <!-- B2B_SEARCH_INTELLIGENCE_FILTER_FIX_END -->
+
+
+<!-- B2B_CUSTOMER_AUTOCOMPLETE_START -->
+<style>
+    .b2b-control-field {
+        position: relative;
+    }
+
+    .b2b-customer-suggestion-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        max-height: 260px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #c6d4e1;
+        border-radius: 10px;
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+        padding: 6px;
+    }
+
+    .b2b-customer-suggestion-item {
+        display: block;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        text-align: left;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        color: #172b4d;
+    }
+
+    .b2b-customer-suggestion-item:hover,
+    .b2b-customer-suggestion-item.is-active {
+        background: #eef5ff;
+    }
+
+    .b2b-customer-suggestion-name {
+        display: block;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .b2b-customer-suggestion-email {
+        display: block;
+        margin-top: 2px;
+        color: #5f6f89;
+        font-size: 12px;
+        line-height: 1.25;
+    }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    function ready(fn) {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", fn);
+        } else {
+            fn();
+        }
+    }
+
+    function clean(value) {
+        return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function normalise(value) {
+        return clean(value).toLowerCase();
+    }
+
+    function dispatchInput(input) {
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    ready(function () {
+        var input = document.getElementById("b2b-search-filter");
+        var menu = document.getElementById("b2b-customer-suggestion-menu");
+        var tbody = document.getElementById("b2b-search-table-body");
+
+        if (!input || !menu || !tbody) {
+            return;
+        }
+
+        var customersByKey = {};
+        var customers = [];
+        var activeIndex = -1;
+
+        function readCustomers() {
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+
+            rows.forEach(function (row) {
+                if (!row.cells || !row.cells[0]) {
+                    return;
+                }
+
+                var raw = clean(row.cells[0].innerText || row.cells[0].textContent || "");
+                var emailMatch = raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+                var email = emailMatch ? emailMatch[0] : "";
+                var name = clean(raw.replace(email, ""));
+
+                if (!name && email) {
+                    name = email;
+                }
+
+                var key = normalise(name + " " + email);
+
+                if (!key || customersByKey[key]) {
+                    return;
+                }
+
+                customersByKey[key] = true;
+                customers.push({
+                    name: name,
+                    email: email,
+                    search: key,
+                    value: name || email
+                });
+            });
+
+            customers.sort(function (a, b) {
+                return a.value.localeCompare(b.value);
+            });
+        }
+
+        function hideMenu() {
+            menu.hidden = true;
+            menu.innerHTML = "";
+            activeIndex = -1;
+        }
+
+        function renderMenu() {
+            var query = normalise(input.value);
+
+            var matches = customers.filter(function (customer) {
+                if (!query) {
+                    return true;
+                }
+
+                return customer.search.indexOf(query) !== -1;
+            }).slice(0, 8);
+
+            menu.innerHTML = "";
+            activeIndex = -1;
+
+            if (!matches.length) {
+                hideMenu();
+                return;
+            }
+
+            matches.forEach(function (customer, index) {
+                var button = document.createElement("button");
+                button.type = "button";
+                button.className = "b2b-customer-suggestion-item";
+                button.setAttribute("data-index", String(index));
+
+                var name = document.createElement("span");
+                name.className = "b2b-customer-suggestion-name";
+                name.textContent = customer.name || customer.email;
+
+                var email = document.createElement("span");
+                email.className = "b2b-customer-suggestion-email";
+                email.textContent = customer.email && customer.email !== customer.name ? customer.email : "";
+
+                button.appendChild(name);
+
+                if (email.textContent) {
+                    button.appendChild(email);
+                }
+
+                button.addEventListener("mousedown", function (event) {
+                    event.preventDefault();
+                    input.value = customer.value;
+                    dispatchInput(input);
+                    hideMenu();
+                });
+
+                menu.appendChild(button);
+            });
+
+            menu.hidden = false;
+        }
+
+        function setActive(index) {
+            var items = Array.prototype.slice.call(menu.querySelectorAll(".b2b-customer-suggestion-item"));
+
+            if (!items.length) {
+                activeIndex = -1;
+                return;
+            }
+
+            if (index < 0) {
+                index = items.length - 1;
+            }
+
+            if (index >= items.length) {
+                index = 0;
+            }
+
+            items.forEach(function (item) {
+                item.classList.remove("is-active");
+            });
+
+            items[index].classList.add("is-active");
+            items[index].scrollIntoView({ block: "nearest" });
+            activeIndex = index;
+        }
+
+        readCustomers();
+
+        input.addEventListener("focus", renderMenu);
+        input.addEventListener("input", renderMenu);
+
+        input.addEventListener("keydown", function (event) {
+            if (menu.hidden) {
+                return;
+            }
+
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setActive(activeIndex + 1);
+            }
+
+            if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setActive(activeIndex - 1);
+            }
+
+            if (event.key === "Enter" && activeIndex >= 0) {
+                event.preventDefault();
+
+                var active = menu.querySelector(".b2b-customer-suggestion-item.is-active");
+                if (active) {
+                    active.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+                }
+            }
+
+            if (event.key === "Escape") {
+                hideMenu();
+            }
+        });
+
+        document.addEventListener("mousedown", function (event) {
+            if (event.target === input || menu.contains(event.target)) {
+                return;
+            }
+
+            hideMenu();
+        });
+    });
+})();
+</script>
+<!-- B2B_CUSTOMER_AUTOCOMPLETE_END -->
 
