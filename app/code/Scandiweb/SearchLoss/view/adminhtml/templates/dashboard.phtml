@@ -7,14 +7,29 @@ $topActions = $block->getTopSearchIntelligenceActions();
 
 function b2bStatusClass(string $status): string
 {
-    $status = strtolower($status);
+    $status = strtolower(trim($status));
 
-    if (str_contains($status, 'order') || str_contains($status, 'cart')) {
+    if (
+        str_contains($status, 'no later matching') ||
+        str_contains($status, 'not recorded') ||
+        str_contains($status, 'zero results') ||
+        str_contains($status, 'unresolved') ||
+        str_contains($status, 'may not have completed')
+    ) {
+        return 'b2b-status-risk';
+    }
+
+    if (
+        str_contains($status, 'matching cart') ||
+        str_contains($status, 'matching order') ||
+        str_contains($status, 'led to cart') ||
+        str_contains($status, 'led to order')
+    ) {
         return 'b2b-status-good';
     }
 
-    if (str_contains($status, 'not recorded') || str_contains($status, 'zero') || str_contains($status, 'slow')) {
-        return 'b2b-status-risk';
+    if (str_contains($status, 'completed')) {
+        return 'b2b-status-neutral';
     }
 
     return 'b2b-status-neutral';
@@ -231,9 +246,15 @@ function b2bStatusClass(string $status): string
 }
 
 .b2b-status-risk {
-    color: #9a3412;
-    background: #ffedd5;
-    border: 1px solid #fed7aa;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    font-weight: 700;
+    line-height: 1.2;
 }
 
 .b2b-status-neutral {

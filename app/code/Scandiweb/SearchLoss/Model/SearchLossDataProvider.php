@@ -8,6 +8,9 @@ class SearchLossDataProvider
 {
     private const SEARCH_EVENT_TABLE = 'scandiweb_searchloss_search_event';
 
+    private array $customerAverageItemValueCache = [];
+    private ?float $storeAverageItemValue = null;
+
     public function __construct(
         private ResourceConnection $resource
     ) {}
@@ -28,126 +31,6 @@ class SearchLossDataProvider
         ];
     }
 
-    public function getSummary(array $events = []): array
-    {
-        if (empty($events)) {
-            $events = $this->getLoggedInSearchIntelligence();
-        }
-
-        $summary = [
-            'totalSearches' => count($events),
-            'unresolvedSearches' => 0,
-            'completedSearches' => 0,
-            'completionNotRecorded' => 0,
-            'matchedCartItems' => 0,
-            'matchedOrders' => 0,
-        ];
-
-        foreach ($events as $event) {
-            if (!empty($event['isUnresolvedLoggedInSearch'])) {
-                $summary['unresolvedSearches']++;
-            }
-
-            if (($event['completionStatus'] ?? '') === 'server_completed') {
-                $summary['completedSearches']++;
-            }
-
-            if (($event['completionStatus'] ?? '') === 'started') {
-                $summary['completionNotRecorded']++;
-            }
-
-            if (!empty($event['matchingCartFound'])) {
-                $summary['matchedCartItems']++;
-            }
-
-            if (!empty($event['matchingOrderFound'])) {
-                $summary['matchedOrders']++;
-            }
-        }
-
-        return $summary;
-    }
-
-    public function getTopSearchIntelligenceActions(array $events = []): array
-    {
-        if (empty($events)) {
-            $events = $this->getLoggedInSearchIntelligence();
-        }
-
-        $actions = [
-            'completion_not_recorded' => [
-                'label' => 'Potential incomplete searches',
-                'count' => 0,
-                'priority' => 'High',
-                'summary' => 'Magento received the search request, but no completed response was recorded.',
-            ],
-            'zero_results' => [
-                'label' => 'Zero-result customer searches',
-                'count' => 0,
-                'priority' => 'High',
-                'summary' => 'The customer searched while logged in, Magento completed the response, but returned zero results.',
-            ],
-            'slow_searches' => [
-                'label' => 'Slow completed searches',
-                'count' => 0,
-                'priority' => 'Medium',
-                'summary' => 'Magento completed the search response, but server-side response time was high.',
-            ],
-            'unresolved_intent' => [
-                'label' => 'No matching cart or order',
-                'count' => 0,
-                'priority' => 'High',
-                'summary' => 'No later cart or order item clearly matched the logged-in customer search.',
-            ],
-            'cart_followthrough' => [
-                'label' => 'Searches leading to cart',
-                'count' => 0,
-                'priority' => 'Positive signal',
-                'summary' => 'A later cart item appears to match the logged-in customer search.',
-            ],
-            'order_followthrough' => [
-                'label' => 'Searches leading to orders',
-                'count' => 0,
-                'priority' => 'Positive signal',
-                'summary' => 'A later order item appears to match the logged-in customer search.',
-            ],
-        ];
-
-        foreach ($events as $event) {
-            $lifecycle = (string)($event['lifecycleStatus'] ?? '');
-            $followThrough = (string)($event['commercialFollowThroughStatus'] ?? '');
-
-            if (str_contains($lifecycle, 'completion not recorded')) {
-                $actions['completion_not_recorded']['count']++;
-            }
-
-            if (str_contains($lifecycle, 'zero results')) {
-                $actions['zero_results']['count']++;
-            }
-
-            if (str_contains($lifecycle, 'slow')) {
-                $actions['slow_searches']['count']++;
-            }
-
-            if (!empty($event['isUnresolvedLoggedInSearch'])) {
-                $actions['unresolved_intent']['count']++;
-            }
-
-            if (str_contains($followThrough, 'cart item')) {
-                $actions['cart_followthrough']['count']++;
-            }
-
-            if (str_contains($followThrough, 'order')) {
-                $actions['order_followthrough']['count']++;
-            }
-        }
-
-        return array_values(array_filter($actions, static function (array $action): bool {
-            return (int)$action['count'] > 0;
-        }));
-    }
-
-
     public function getLoggedInSearchIntelligence(): array
     {
         $connection = $this->resource->getConnection();
@@ -161,18 +44,7 @@ class SearchLossDataProvider
 
         $rows = $connection->fetchAll(
             $connection->select()
-                ->from(['se' => $table], [
-                    'event_id',
-                    'searched_at',
-                    'completed_at',
-                    'response_time_ms',
-                    'completion_status',
-                    'store_id',
-                    'customer_id',
-                    'search_term',
-                    'results_count',
-                    'source',
-                ])
+                ->from(['se' => $table])
                 ->joinLeft(
                     ['ce' => $customerTable],
                     'ce.entity_id = se.customer_id',
@@ -182,234 +54,468 @@ class SearchLossDataProvider
                         'customer_lastname' => 'lastname',
                     ]
                 )
-                ->order('se.searched_at DESC')
-                ->limit(100)
+                ->order('se.event_id DESC')
+                ->limit(500)
         );
 
         $events = [];
 
         foreach ($rows as $row) {
-            $status = $this->getLifecycleStatus($row);
-            $followThrough = $this->getFollowThrough($row);
+            $customerId = (int)$row['customer_id'];
+            $searchTerm = (string)$row['search_term'];
 
-            $events[] = [
+            $lifecycle = $this->getLifecycleStatus($row);
+            $followThrough = $this->getCommercialFollowThrough($customerId, $searchTerm, (string)$row['searched_at']);
+
+            $event = [
                 'eventId' => (int)$row['event_id'],
                 'searchedAt' => (string)$row['searched_at'],
                 'completedAt' => $row['completed_at'] === null ? null : (string)$row['completed_at'],
                 'responseTimeMs' => $row['response_time_ms'] === null ? null : (int)$row['response_time_ms'],
                 'completionStatus' => (string)$row['completion_status'],
                 'storeId' => (int)$row['store_id'],
-                'customerId' => (int)$row['customer_id'],
+                'customerId' => $customerId,
                 'customerEmail' => (string)($row['customer_email'] ?? ''),
                 'customerName' => trim((string)($row['customer_firstname'] ?? '') . ' ' . (string)($row['customer_lastname'] ?? '')),
-                'searchTerm' => (string)$row['search_term'],
+                'searchTerm' => $searchTerm,
                 'resultsCount' => $row['results_count'] === null ? null : (int)$row['results_count'],
                 'source' => (string)$row['source'],
-                'lifecycleStatus' => $status['label'],
-                'lifecycleExplanation' => $status['explanation'],
-                'isPossibleSearchFriction' => $status['isPossibleSearchFriction'],
-                'matchingCartFound' => $followThrough['matchingCartFound'],
-                'matchingOrderFound' => $followThrough['matchingOrderFound'],
-                'matchedItemName' => $followThrough['matchedItemName'],
-                'matchedItemSku' => $followThrough['matchedItemSku'],
-                'matchedQuoteId' => $followThrough['matchedQuoteId'],
-                'matchedOrderId' => $followThrough['matchedOrderId'],
+                'lifecycleStatus' => $lifecycle['status'],
+                'lifecycleExplanation' => $lifecycle['explanation'],
                 'commercialFollowThroughStatus' => $followThrough['status'],
                 'commercialFollowThroughExplanation' => $followThrough['explanation'],
-                'isUnresolvedLoggedInSearch' => $followThrough['isUnresolvedLoggedInSearch'],
+                'matchedItemName' => $followThrough['matchedItemName'],
+                'matchedItemSku' => $followThrough['matchedItemSku'],
+                'matchedItemType' => $followThrough['matchedItemType'],
             ];
+
+            $isUnresolved = $this->isUnresolvedLoggedInSearch($event);
+            $customerAverageItemValue = $this->getCustomerAverageItemValue($customerId);
+            $potentialValue = $isUnresolved ? $customerAverageItemValue : 0.0;
+
+            $event['isUnresolvedLoggedInSearch'] = $isUnresolved;
+            $event['customerAverageItemValue'] = round($customerAverageItemValue, 2);
+            $event['customerAverageItemValueFormatted'] = $this->formatCurrency($customerAverageItemValue);
+            $event['potentialValue'] = round($potentialValue, 2);
+            $event['potentialValueFormatted'] = $potentialValue > 0 ? $this->formatCurrency($potentialValue) : '-';
+
+            $events[] = $event;
         }
 
         return $events;
     }
 
+    public function getSummary(array $events): array
+    {
+        $summary = [
+            'totalSearches' => count($events),
+            'unresolvedSearches' => 0,
+            'completedSearches' => 0,
+            'completionNotRecorded' => 0,
+            'zeroResultSearches' => 0,
+            'noLaterMatchingCartOrOrder' => 0,
+            'matchedCartItems' => 0,
+            'matchedOrders' => 0,
+            'potentialValue' => 0.0,
+            'potentialValueFormatted' => '$0',
+        ];
+
+        $potentialValueKeys = [];
+
+        foreach ($events as $event) {
+            if (($event['completedAt'] ?? null) === null) {
+                $summary['completionNotRecorded']++;
+            } else {
+                $summary['completedSearches']++;
+            }
+
+            if (($event['resultsCount'] ?? null) === 0) {
+                $summary['zeroResultSearches']++;
+            }
+
+            $followThrough = strtolower((string)($event['commercialFollowThroughStatus'] ?? ''));
+
+            if (str_contains($followThrough, 'matching cart item')) {
+                $summary['matchedCartItems']++;
+            }
+
+            if (str_contains($followThrough, 'matching order item')) {
+                $summary['matchedOrders']++;
+            }
+
+            if (str_contains($followThrough, 'no later matching')) {
+                $summary['noLaterMatchingCartOrOrder']++;
+            }
+
+            if (!empty($event['isUnresolvedLoggedInSearch'])) {
+                $summary['unresolvedSearches']++;
+
+                $key = (int)($event['customerId'] ?? 0) . '|' . strtolower(trim((string)($event['searchTerm'] ?? '')));
+
+                if (!isset($potentialValueKeys[$key])) {
+                    $summary['potentialValue'] += (float)($event['potentialValue'] ?? 0);
+                    $potentialValueKeys[$key] = true;
+                }
+            }
+        }
+
+        $summary['potentialValue'] = round($summary['potentialValue'], 2);
+        $summary['potentialValueFormatted'] = $this->formatCurrency($summary['potentialValue']);
+
+        return $summary;
+    }
+
+    public function getTopSearchIntelligenceActions(array $events): array
+    {
+        $summary = $this->getSummary($events);
+
+        return [
+            [
+                'label' => 'Potential value',
+                'count' => (int)round((float)$summary['potentialValue']),
+                'displayValue' => $summary['potentialValueFormatted'],
+            ],
+            [
+                'label' => 'Potential incomplete searches',
+                'count' => (int)$summary['completionNotRecorded'],
+            ],
+            [
+                'label' => 'Zero-result customer searches',
+                'count' => (int)$summary['zeroResultSearches'],
+            ],
+            [
+                'label' => 'No matching cart or order',
+                'count' => (int)$summary['noLaterMatchingCartOrOrder'],
+            ],
+            [
+                'label' => 'Searches leading to cart',
+                'count' => (int)$summary['matchedCartItems'],
+            ],
+            [
+                'label' => 'Searches leading to orders',
+                'count' => (int)$summary['matchedOrders'],
+            ],
+        ];
+    }
+
     private function getLifecycleStatus(array $row): array
     {
-        $completionStatus = (string)($row['completion_status'] ?? 'started');
-        $completedAt = $row['completed_at'] ?? null;
-        $responseTimeMs = $row['response_time_ms'] === null ? null : (int)$row['response_time_ms'];
+        if (($row['completed_at'] ?? null) === null || (string)($row['completion_status'] ?? '') !== 'server_completed') {
+            return [
+                'status' => 'Search started, completion not recorded',
+                'explanation' => 'Magento received the logged-in customer search, but no completed server response was recorded.',
+            ];
+        }
+
         $resultsCount = $row['results_count'] === null ? null : (int)$row['results_count'];
 
-        if ($completionStatus === 'started' && $completedAt === null) {
+        if ($resultsCount === 0) {
             return [
-                'label' => 'Search started, completion not recorded',
-                'explanation' => 'Magento received the logged-in customer search, but no completed server response was recorded.',
-                'isPossibleSearchFriction' => true,
-            ];
-        }
-
-        if ($completionStatus === 'server_completed' && $resultsCount === 0) {
-            return [
-                'label' => 'Completed, zero results',
+                'status' => 'Completed, zero results',
                 'explanation' => 'Magento completed the search response, but returned zero results.',
-                'isPossibleSearchFriction' => true,
-            ];
-        }
-
-        if ($completionStatus === 'server_completed' && $responseTimeMs !== null && $responseTimeMs >= 3000) {
-            return [
-                'label' => 'Completed slowly',
-                'explanation' => 'Magento completed the search response, but the server-side response time was high.',
-                'isPossibleSearchFriction' => true,
-            ];
-        }
-
-        if ($completionStatus === 'server_completed') {
-            return [
-                'label' => 'Completed',
-                'explanation' => 'Magento recorded a completed server response for this logged-in customer search.',
-                'isPossibleSearchFriction' => false,
             ];
         }
 
         return [
-            'label' => 'Needs review',
-            'explanation' => 'This logged-in search event has an unexpected lifecycle state.',
-            'isPossibleSearchFriction' => true,
+            'status' => 'Completed',
+            'explanation' => 'Magento recorded a completed server response for this logged-in customer search.',
         ];
     }
 
-    private function getFollowThrough(array $row): array
+    private function getCommercialFollowThrough(int $customerId, string $searchTerm, string $searchedAt): array
     {
-        $customerId = (int)($row['customer_id'] ?? 0);
-        $searchTerm = trim((string)($row['search_term'] ?? ''));
-        $searchedAt = (string)($row['searched_at'] ?? '');
-
-        if ($customerId <= 0 || $searchTerm === '' || $searchedAt === '') {
-            return $this->emptyFollowThrough('Needs review', 'Customer, search term, or timestamp was missing.', true);
+        if ($customerId <= 0 || trim($searchTerm) === '') {
+            return $this->noFollowThrough();
         }
 
-        $orderMatch = $this->findOrderMatch($customerId, $searchTerm, $searchedAt);
+        $orderMatch = $this->findMatchingOrderItem($customerId, $searchTerm, $searchedAt);
 
-        if (!empty($orderMatch)) {
+        if ($orderMatch !== null) {
             return [
-                'matchingCartFound' => false,
-                'matchingOrderFound' => true,
+                'status' => 'Matching order item found',
+                'explanation' => 'A later order item appears to match this logged-in customer search.',
                 'matchedItemName' => (string)($orderMatch['name'] ?? ''),
                 'matchedItemSku' => (string)($orderMatch['sku'] ?? ''),
-                'matchedQuoteId' => null,
-                'matchedOrderId' => (int)($orderMatch['order_id'] ?? 0),
-                'status' => 'Matching order found',
-                'explanation' => 'A later order item appears to match this logged-in search.',
-                'isUnresolvedLoggedInSearch' => false,
+                'matchedItemType' => 'order',
             ];
         }
 
-        $cartMatch = $this->findCartMatch($customerId, $searchTerm, $searchedAt);
+        $cartMatch = $this->findMatchingCartItem($customerId, $searchTerm, $searchedAt);
 
-        if (!empty($cartMatch)) {
+        if ($cartMatch !== null) {
             return [
-                'matchingCartFound' => true,
-                'matchingOrderFound' => false,
+                'status' => 'Matching cart item found',
+                'explanation' => 'A later cart item appears to match this logged-in customer search.',
                 'matchedItemName' => (string)($cartMatch['name'] ?? ''),
                 'matchedItemSku' => (string)($cartMatch['sku'] ?? ''),
-                'matchedQuoteId' => (int)($cartMatch['quote_id'] ?? 0),
-                'matchedOrderId' => null,
-                'status' => 'Matching cart item found',
-                'explanation' => 'A later cart item appears to match this logged-in search.',
-                'isUnresolvedLoggedInSearch' => false,
+                'matchedItemType' => 'cart',
             ];
         }
 
-        return $this->emptyFollowThrough(
-            'No later matching cart/order found',
-            'No later cart or order item clearly matched this logged-in search.',
-            true
-        );
+        return $this->noFollowThrough();
     }
 
-    private function emptyFollowThrough(string $status, string $explanation, bool $unresolved): array
+    private function noFollowThrough(): array
     {
         return [
-            'matchingCartFound' => false,
-            'matchingOrderFound' => false,
+            'status' => 'No later matching cart/order found',
+            'explanation' => 'No later cart or order item clearly matched this logged-in search.',
             'matchedItemName' => '',
             'matchedItemSku' => '',
-            'matchedQuoteId' => null,
-            'matchedOrderId' => null,
-            'status' => $status,
-            'explanation' => $explanation,
-            'isUnresolvedLoggedInSearch' => $unresolved,
+            'matchedItemType' => '',
         ];
     }
 
-    private function findCartMatch(int $customerId, string $searchTerm, string $searchedAt): array
+    private function findMatchingCartItem(int $customerId, string $searchTerm, string $searchedAt): ?array
     {
         $connection = $this->resource->getConnection();
         $quoteTable = $this->resource->getTableName('quote');
         $quoteItemTable = $this->resource->getTableName('quote_item');
 
         if (!$connection->isTableExists($quoteTable) || !$connection->isTableExists($quoteItemTable)) {
-            return [];
+            return null;
         }
 
-        $conditions = $this->getItemMatchConditions('qi', $searchTerm);
+        $matchCondition = $this->getItemMatchCondition('qi', $searchTerm);
 
-        if (empty($conditions)) {
-            return [];
+        if ($matchCondition === null) {
+            return null;
         }
 
         $row = $connection->fetchRow(
             $connection->select()
-                ->from(['q' => $quoteTable], ['quote_id' => 'entity_id'])
-                ->join(['qi' => $quoteItemTable], 'qi.quote_id = q.entity_id', ['sku', 'name', 'created_at', 'updated_at'])
+                ->from(['qi' => $quoteItemTable], ['name', 'sku'])
+                ->joinInner(['q' => $quoteTable], 'q.entity_id = qi.quote_id', [])
                 ->where('q.customer_id = ?', $customerId)
                 ->where('qi.parent_item_id IS NULL')
                 ->where('qi.created_at >= ?', $searchedAt)
-                ->where('(' . implode(' OR ', $conditions) . ')')
+                ->where($matchCondition)
                 ->order('qi.created_at ASC')
                 ->limit(1)
         );
 
-        return is_array($row) ? $row : [];
+        return $row ?: null;
     }
 
-    private function findOrderMatch(int $customerId, string $searchTerm, string $searchedAt): array
+    private function findMatchingOrderItem(int $customerId, string $searchTerm, string $searchedAt): ?array
     {
         $connection = $this->resource->getConnection();
         $orderTable = $this->resource->getTableName('sales_order');
         $orderItemTable = $this->resource->getTableName('sales_order_item');
 
         if (!$connection->isTableExists($orderTable) || !$connection->isTableExists($orderItemTable)) {
-            return [];
+            return null;
         }
 
-        $conditions = $this->getItemMatchConditions('soi', $searchTerm);
+        $matchCondition = $this->getItemMatchCondition('soi', $searchTerm);
 
-        if (empty($conditions)) {
-            return [];
+        if ($matchCondition === null) {
+            return null;
         }
 
         $row = $connection->fetchRow(
             $connection->select()
-                ->from(['so' => $orderTable], ['order_id' => 'entity_id', 'increment_id'])
-                ->join(['soi' => $orderItemTable], 'soi.order_id = so.entity_id', ['sku', 'name', 'created_at'])
+                ->from(['soi' => $orderItemTable], ['name', 'sku'])
+                ->joinInner(['so' => $orderTable], 'so.entity_id = soi.order_id', [])
                 ->where('so.customer_id = ?', $customerId)
+                ->where('so.state NOT IN (?)', ['canceled'])
                 ->where('soi.parent_item_id IS NULL')
                 ->where('so.created_at >= ?', $searchedAt)
-                ->where('so.state != ?', 'canceled')
-                ->where('(' . implode(' OR ', $conditions) . ')')
+                ->where($matchCondition)
                 ->order('so.created_at ASC')
                 ->limit(1)
         );
 
-        return is_array($row) ? $row : [];
+        return $row ?: null;
     }
 
-    private function getItemMatchConditions(string $alias, string $searchTerm): array
+    private function getItemMatchCondition(string $alias, string $searchTerm): ?string
     {
         $connection = $this->resource->getConnection();
         $cleanTerm = trim((string)preg_replace('/\s+/', ' ', strtolower($searchTerm)));
 
         if ($cleanTerm === '') {
-            return [];
+            return null;
         }
 
         $like = '%' . $cleanTerm . '%';
 
-        return [
-            $connection->quoteInto('LOWER(' . $alias . '.name) LIKE ?', $like),
-            $connection->quoteInto('LOWER(' . $alias . '.sku) LIKE ?', $like),
-        ];
+        return '('
+            . $connection->quoteInto('LOWER(' . $alias . '.name) LIKE ?', $like)
+            . ' OR '
+            . $connection->quoteInto('LOWER(' . $alias . '.sku) LIKE ?', $like)
+            . ')';
+    }
+
+    private function isUnresolvedLoggedInSearch(array $event): bool
+    {
+        if (($event['completedAt'] ?? null) === null) {
+            return true;
+        }
+
+        if (($event['resultsCount'] ?? null) === 0) {
+            return true;
+        }
+
+        $followThrough = strtolower((string)($event['commercialFollowThroughStatus'] ?? ''));
+
+        return str_contains($followThrough, 'no later matching');
+    }
+
+    private function getCustomerAverageItemValue(int $customerId): float
+    {
+        if ($customerId <= 0) {
+            return $this->getStoreAverageItemValue();
+        }
+
+        if (array_key_exists($customerId, $this->customerAverageItemValueCache)) {
+            return $this->customerAverageItemValueCache[$customerId];
+        }
+
+        $connection = $this->resource->getConnection();
+        $orderTable = $this->resource->getTableName('sales_order');
+        $orderItemTable = $this->resource->getTableName('sales_order_item');
+
+        if (!$connection->isTableExists($orderTable) || !$connection->isTableExists($orderItemTable)) {
+            $this->customerAverageItemValueCache[$customerId] = 0.0;
+            return 0.0;
+        }
+
+        $revenueExpression = $this->getRevenueExpression('soi', $orderItemTable, 'qty_ordered');
+
+        $row = $connection->fetchRow(
+            $connection->select()
+                ->from(
+                    ['soi' => $orderItemTable],
+                    [
+                        'revenue' => new \Zend_Db_Expr('SUM(' . $revenueExpression . ')'),
+                        'qty' => new \Zend_Db_Expr('SUM(COALESCE(soi.qty_ordered, 0))'),
+                    ]
+                )
+                ->joinInner(['so' => $orderTable], 'so.entity_id = soi.order_id', [])
+                ->where('so.customer_id = ?', $customerId)
+                ->where('so.state NOT IN (?)', ['canceled'])
+                ->where('soi.parent_item_id IS NULL')
+        );
+
+        $revenue = (float)($row['revenue'] ?? 0);
+        $qty = (float)($row['qty'] ?? 0);
+
+        if ($revenue > 0 && $qty > 0) {
+            $value = $revenue / $qty;
+            $this->customerAverageItemValueCache[$customerId] = $value;
+            return $value;
+        }
+
+        $cartFallback = $this->getCustomerAverageCartItemValue($customerId);
+
+        if ($cartFallback > 0) {
+            $this->customerAverageItemValueCache[$customerId] = $cartFallback;
+            return $cartFallback;
+        }
+
+        $storeFallback = $this->getStoreAverageItemValue();
+        $this->customerAverageItemValueCache[$customerId] = $storeFallback;
+
+        return $storeFallback;
+    }
+
+    private function getCustomerAverageCartItemValue(int $customerId): float
+    {
+        $connection = $this->resource->getConnection();
+        $quoteTable = $this->resource->getTableName('quote');
+        $quoteItemTable = $this->resource->getTableName('quote_item');
+
+        if (!$connection->isTableExists($quoteTable) || !$connection->isTableExists($quoteItemTable)) {
+            return 0.0;
+        }
+
+        $revenueExpression = $this->getRevenueExpression('qi', $quoteItemTable, 'qty');
+
+        $row = $connection->fetchRow(
+            $connection->select()
+                ->from(
+                    ['qi' => $quoteItemTable],
+                    [
+                        'revenue' => new \Zend_Db_Expr('SUM(' . $revenueExpression . ')'),
+                        'qty' => new \Zend_Db_Expr('SUM(COALESCE(qi.qty, 0))'),
+                    ]
+                )
+                ->joinInner(['q' => $quoteTable], 'q.entity_id = qi.quote_id', [])
+                ->where('q.customer_id = ?', $customerId)
+                ->where('qi.parent_item_id IS NULL')
+        );
+
+        $revenue = (float)($row['revenue'] ?? 0);
+        $qty = (float)($row['qty'] ?? 0);
+
+        return $revenue > 0 && $qty > 0 ? $revenue / $qty : 0.0;
+    }
+
+    private function getStoreAverageItemValue(): float
+    {
+        if ($this->storeAverageItemValue !== null) {
+            return $this->storeAverageItemValue;
+        }
+
+        $connection = $this->resource->getConnection();
+        $orderTable = $this->resource->getTableName('sales_order');
+        $orderItemTable = $this->resource->getTableName('sales_order_item');
+
+        if (!$connection->isTableExists($orderTable) || !$connection->isTableExists($orderItemTable)) {
+            $this->storeAverageItemValue = 0.0;
+            return 0.0;
+        }
+
+        $revenueExpression = $this->getRevenueExpression('soi', $orderItemTable, 'qty_ordered');
+
+        $row = $connection->fetchRow(
+            $connection->select()
+                ->from(
+                    ['soi' => $orderItemTable],
+                    [
+                        'revenue' => new \Zend_Db_Expr('SUM(' . $revenueExpression . ')'),
+                        'qty' => new \Zend_Db_Expr('SUM(COALESCE(soi.qty_ordered, 0))'),
+                    ]
+                )
+                ->joinInner(['so' => $orderTable], 'so.entity_id = soi.order_id', [])
+                ->where('so.state NOT IN (?)', ['canceled'])
+                ->where('soi.parent_item_id IS NULL')
+        );
+
+        $revenue = (float)($row['revenue'] ?? 0);
+        $qty = (float)($row['qty'] ?? 0);
+
+        $this->storeAverageItemValue = $revenue > 0 && $qty > 0 ? $revenue / $qty : 0.0;
+
+        return $this->storeAverageItemValue;
+    }
+
+    private function getRevenueExpression(string $alias, string $table, string $qtyColumn): string
+    {
+        $connection = $this->resource->getConnection();
+
+        if ($connection->tableColumnExists($table, 'base_row_total')) {
+            return 'COALESCE(' . $alias . '.base_row_total, 0)';
+        }
+
+        if ($connection->tableColumnExists($table, 'row_total')) {
+            return 'COALESCE(' . $alias . '.row_total, 0)';
+        }
+
+        if ($connection->tableColumnExists($table, 'base_price')) {
+            return 'COALESCE(' . $alias . '.base_price, 0) * COALESCE(' . $alias . '.' . $qtyColumn . ', 0)';
+        }
+
+        if ($connection->tableColumnExists($table, 'price')) {
+            return 'COALESCE(' . $alias . '.price, 0) * COALESCE(' . $alias . '.' . $qtyColumn . ', 0)';
+        }
+
+        return '0';
+    }
+
+    private function formatCurrency(float $value): string
+    {
+        return '$' . number_format($value, 0);
     }
 }
