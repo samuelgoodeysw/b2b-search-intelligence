@@ -485,8 +485,7 @@ function b2bStatusClass(string $status): string
             <div class="b2b-controls">
                 <div class="b2b-control-field">
                     <label for="b2b-search-filter">Customer</label>
-                    <input id="b2b-search-filter" type="search" list="b2b-customer-suggestions" placeholder="Search customer name or email" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-autocomplete="list">
-                    <datalist id="b2b-customer-suggestions"></datalist>
+                    <input id="b2b-search-filter" type="text" name="b2b_customer_filter_no_browser_history" placeholder="Search customer name or email" autocomplete="new-password" autocorrect="off" autocapitalize="none" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" data-lpignore="true" data-form-type="other">
                     <div id="b2b-customer-suggestion-menu" class="b2b-customer-suggestion-menu" hidden></div>
                 </div>
 
@@ -674,7 +673,7 @@ function b2bStatusClass(string $status): string
 
     ready(function () {
         var searchInput = document.getElementById("b2b-search-filter");
-        var suggestionList = document.getElementById("b2b-customer-suggestions");
+        var suggestionList = null;
         var lifecycleFilter = document.getElementById("b2b-lifecycle-filter");
         var followFilter = document.getElementById("b2b-follow-filter");
         var unresolvedFilter = document.getElementById("b2b-unresolved-filter");
@@ -1020,10 +1019,17 @@ function b2bStatusClass(string $status): string
     ready(function () {
         var input = document.getElementById("b2b-search-filter");
         if (input) {
-            input.setAttribute("autocomplete", "off");
+            input.setAttribute("autocomplete", "new-password");
             input.setAttribute("autocorrect", "off");
             input.setAttribute("autocapitalize", "none");
             input.setAttribute("spellcheck", "false");
+            input.setAttribute("name", "b2b_customer_filter_no_browser_history");
+            input.setAttribute("data-lpignore", "true");
+            input.setAttribute("data-form-type", "other");
+            input.setAttribute("readonly", "readonly");
+            window.setTimeout(function () {
+                input.removeAttribute("readonly");
+            }, 150);
         }
         var menu = document.getElementById("b2b-customer-suggestion-menu");
         var tbody = document.getElementById("b2b-search-table-body");
