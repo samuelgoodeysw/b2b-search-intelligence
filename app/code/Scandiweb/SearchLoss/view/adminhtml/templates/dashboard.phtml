@@ -96,46 +96,38 @@ function b2bStatusClass(string $status): string
 
 .b2b-actions-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    grid-template-columns: repeat(5, minmax(180px, 1fr));
     gap: 12px;
     margin-bottom: 18px;
 }
 
 .b2b-action-card {
     background: #ffffff;
-    border: 1px solid #dbeafe;
+    border: 1px solid #e2e8f0;
     border-radius: 16px;
-    padding: 16px;
+    padding: 16px 20px;
     box-shadow: 0 8px 20px rgba(15, 23, 42, .05);
 }
 
 .b2b-action-priority {
-    display: inline-flex;
-    margin-bottom: 10px;
-    border-radius: 999px;
-    padding: 4px 9px;
-    color: #1d4ed8;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    font-size: 11px;
-    font-weight: 850;
+    display: none;
 }
 
 .b2b-action-card h3 {
     margin: 0 0 8px;
-    color: #0f172a;
-    font-size: 15px;
-    font-weight: 850;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
     line-height: 1.35;
 }
 
 .b2b-action-card strong {
     display: block;
     color: #0f172a;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 900;
     letter-spacing: -.03em;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .b2b-action-card p {
@@ -269,46 +261,16 @@ function b2bStatusClass(string $status): string
         </p>
     </section>
 
-    <section class="b2b-summary-grid">
-        <div class="b2b-summary-card">
-            <span>Total logged-in searches</span>
-            <strong><?= (int)$summary['totalSearches'] ?></strong>
-        </div>
-        <div class="b2b-summary-card">
-            <span>Unresolved searches</span>
-            <strong><?= (int)$summary['unresolvedSearches'] ?></strong>
-        </div>
-        <div class="b2b-summary-card">
-            <span>Completed searches</span>
-            <strong><?= (int)$summary['completedSearches'] ?></strong>
-        </div>
-        <div class="b2b-summary-card">
-            <span>Completion not recorded</span>
-            <strong><?= (int)$summary['completionNotRecorded'] ?></strong>
-        </div>
-        <div class="b2b-summary-card">
-            <span>Matched cart items</span>
-            <strong><?= (int)$summary['matchedCartItems'] ?></strong>
-        </div>
-        <div class="b2b-summary-card">
-            <span>Matched orders</span>
-            <strong><?= (int)$summary['matchedOrders'] ?></strong>
-        </div>
-    </section>
-
-    <?php if (!empty($topActions)): ?>
+<?php if (!empty($topActions)): ?>
         <section class="b2b-panel" style="margin-bottom:18px;">
             <div class="b2b-panel-header">
-                <h2>Top Search Intelligence Actions</h2>
-                <p>
-                    Practical review areas based only on logged-in customer search events.
-                </p>
+                <h2>KPIs</h2>
+                <p>Key signals based on logged-in customer search events.</p>
             </div>
             <div class="b2b-actions-grid" style="padding:18px 20px;">
                 <?php foreach ($topActions as $action): ?>
                     <article class="b2b-action-card">
-                        <span class="b2b-action-priority"><?= $block->escapeHtml($action['priority']) ?></span>
-                        <h3><?= $block->escapeHtml($action['label']) ?></h3>
+<h3><?= $block->escapeHtml($action['label']) ?></h3>
                         <strong><?= (int)$action['count'] ?></strong>
                         <p><?= $block->escapeHtml($action['summary']) ?></p>
                     </article>
