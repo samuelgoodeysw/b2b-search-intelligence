@@ -328,6 +328,25 @@ function b2bStatusClass(string $status): string
     line-height: 1.35;
 }
 
+
+.b2b-panel-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.b2b-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.b2b-panel-actions .b2b-button {
+    min-height: 34px;
+}
+
 </style>
 
 <div class="b2b-search-intelligence">
@@ -363,11 +382,21 @@ function b2bStatusClass(string $status): string
 
     <section class="b2b-panel">
         <div class="b2b-panel-header">
-            <h2>Logged-in customer searches</h2>
-            <p>
-                This table only shows search events captured from logged-in Magento customers.
-                It does not include broad failed-search keyword analysis.
-            </p>
+            <div class="b2b-panel-title-row">
+                <div>
+                    <h2>Logged-in customer searches</h2>
+                    <p>
+                        This table only shows search events captured from logged-in Magento customers.
+                        It does not include broad failed-search keyword analysis.
+                    </p>
+                </div>
+                <?php if (!empty($events)): ?>
+                    <div class="b2b-panel-actions">
+                        <button type="button" class="b2b-button" id="b2b-export-current">Export current view</button>
+                        <button type="button" class="b2b-button" id="b2b-export-unresolved">Export unresolved</button>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <?php if (empty($events)): ?>
