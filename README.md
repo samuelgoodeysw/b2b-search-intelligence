@@ -2,19 +2,17 @@
 
 B2B Search Intelligence is a focused Magento / Adobe Commerce module for logged-in customer search intent.
 
-It helps answer:
+It shows what logged-in B2B customers searched for, whether Magento completed the search response, and whether the customer later added or ordered anything matching.
 
-- Which logged-in customers searched?
-- What did they search for?
-- Did Magento complete the search response?
-- How long did the search response take?
-- How many results were returned?
-- Did the customer later add or order something matching?
-- Which searches look unresolved?
+## The core question
 
-## Core idea
+Have our logged-in customers been searching for products but not reaching, adding, or buying them?
 
-B2B customers often search with clear buying intent:
+## Why this matters
+
+B2B customers often search with clear buying intent.
+
+They may search by:
 
 - SKU
 - part number
@@ -25,34 +23,79 @@ B2B customers often search with clear buying intent:
 - technical wording
 - fitment or use-case wording
 
-This module focuses on customer-level search intent, not broad store-level keyword analytics.
+When a logged-in customer searches and does not continue to cart or order, that is a strong commercial signal for the merchant to review.
 
-## Current feature scope
+## What the module shows
 
-- Captures logged-in customer searches.
-- Records when the search started.
-- Records when Magento completed the search response.
-- Stores server-side response time.
-- Stores result count where available.
-- Joins search events to Magento customer accounts.
-- Checks later cart/order follow-through.
-- Flags unresolved logged-in searches.
+The main report shows:
 
-## Current Magento module path
+- customer
+- email
+- search term
+- search started time
+- search completed time
+- server-side response time
+- result count
+- lifecycle status
+- commercial follow-through
+- matched cart or order item
+- unresolved status
 
-Current path:
+## Current dashboard summary
 
-app/code/Scandiweb/SearchLoss
+The dashboard currently includes:
 
-The code was split from the broader Search Loss Audit project.
+- total logged-in searches
+- unresolved searches
+- completed searches
+- completion not recorded
+- matched cart items
+- matched orders
 
-The next cleanup step is to strip out failed-search, weak-search, GA4, and catalogue-audit features so this repo becomes a focused B2B Search Intelligence module.
+## Lifecycle statuses
 
-## Intended product positioning
+The module can identify:
 
-B2B Search Intelligence shows what logged-in customers searched for, whether Magento completed the search response, and whether they later added or ordered anything matching.
+- Completed
+- Completed, zero results
+- Completed slowly
+- Search started, completion not recorded
+- Needs review
 
-It is designed as a lightweight, focused revenue-intent module for B2B merchants.
+## Follow-through statuses
+
+The module can identify:
+
+- Matching cart item found
+- Matching order found
+- No later matching cart/order found
+- Needs review
+
+## Example interpretation
+
+Example 1:
+
+A logged-in customer searched for leaf spring.
+
+Magento completed the response.
+
+Results were returned.
+
+The customer later added a matching item to cart.
+
+Status: matching cart item found.
+
+Example 2:
+
+A logged-in customer searched for leaf spring 123.
+
+Magento received the search request.
+
+No completed search response was recorded.
+
+No later matching cart or order was found.
+
+Status: unresolved logged-in search.
 
 ## What this is not
 
@@ -61,50 +104,37 @@ This focused module is not intended to be:
 - a broad failed-search audit dashboard
 - a GA4 weak-search analytics tool
 - a catalogue evidence audit
-- a replacement for Adobe Live Search, Algolia, Klevu, or Searchspring
+- a replacement for Adobe Live Search, Algolia, Klevu, Searchspring, or similar search platforms
 - a guaranteed lost-revenue calculator
 
-## Hero report
+## Current technical module path
 
-The main report should show:
+Current path:
 
-- Customer
-- Email
-- Search term
-- Search started
-- Search completed
-- Response time
-- Result count
-- Lifecycle status
-- Commercial follow-through
-- Matched cart/order item
-- Unresolved status
+app/code/Scandiweb/SearchLoss
 
-## Example interpretation
+Visible product wording should use:
 
-Example 1:
+B2B Search Intelligence
 
-Customer searched for leaf spring.
-Magento completed the response.
-Results were returned.
-The customer later added a matching item to cart.
-Status: matching cart item found.
+The technical namespace can be renamed later once the focused product is stable.
 
-Example 2:
+## Current API endpoint
 
-Customer searched for leaf spring 123.
-Magento received the search request.
-No completed search response was recorded.
-No later matching cart or order was found.
-Status: unresolved logged-in search.
+Current endpoint:
 
-## Near-term cleanup plan
+/rest/V1/search-loss/dashboard
 
-1. Keep logged-in search lifecycle tracking.
-2. Keep customer account joining.
-3. Keep cart/order follow-through matching.
-4. Remove failed-search dashboard sections.
-5. Remove weak-search and GA4 sections.
-6. Remove broad catalogue-audit evidence.
-7. Rename visible product wording to B2B Search Intelligence.
-8. Later, rename the technical Magento module once the focused product is stable.
+Expected payload sections:
+
+- summary
+- loggedInSearchIntelligence
+
+## Near-term roadmap
+
+1. Keep the module focused on logged-in customer search intelligence.
+2. Polish admin dashboard wording.
+3. Add a simple export for unresolved searches.
+4. Add Top Search Intelligence Actions based only on logged-in search events.
+5. Add configuration for slow-search threshold.
+6. Later, rename the technical module namespace.
