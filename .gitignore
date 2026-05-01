@@ -1,0 +1,7 @@
+/vendor/
+/generated/
+/pub/static/
+/var/
+/app/etc/env.php
+.DS_Store
+*.log

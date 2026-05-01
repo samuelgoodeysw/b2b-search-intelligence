@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="scandiweb" translate="label" sortOrder="500">
+            <label>Scandiweb</label>
+        </tab>
+
+        <section id="searchloss" translate="label" type="text" sortOrder="100"
+                 showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Search Loss Audit</label>
+            <tab>scandiweb</tab>
+            <resource>Scandiweb_SearchLoss::searchloss</resource>
+
+            <group id="ga4" translate="label" type="text" sortOrder="10"
+                   showInDefault="1" showInWebsite="1" showInStore="0">
+                <label>GA4 Integration</label>
+
+                <field id="enabled" translate="label" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Enable GA4 Sync</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+
+                <field id="property_id" translate="label" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>GA4 Property ID</label>
+                </field>
+
+                <field id="frontend_tag_enabled" translate="label" type="select" sortOrder="25"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Frontend GA4 Tag</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment><![CDATA[Local/staging validation helper. Adds the GA4 tag to the Magento storefront and sends search-result events for real browser searches.]]></comment>
+                </field>
+
+                <field id="measurement_id" translate="label" type="text" sortOrder="26"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>GA4 Measurement ID</label>
+                    <comment><![CDATA[Example: G-XXXXXXXXXX. This is the web data stream Measurement ID, not the numeric GA4 Property ID.]]></comment>
+                </field>
+
+                <field id="credentials_json" translate="label" type="textarea" sortOrder="30"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Service Account Credentials JSON</label>
+                    <comment><![CDATA[Paste service account JSON for Google Analytics Data API. For local/demo use only. Later this should be encrypted.]]></comment>
+                </field>
+
+                <field id="oauth_client_id" translate="label" type="text" sortOrder="40"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>OAuth Client ID</label>
+                    <comment><![CDATA[Used when GA4 cannot accept service account access.]]></comment>
+                </field>
+
+                <field id="oauth_client_secret" translate="label" type="password" sortOrder="50"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>OAuth Client Secret</label>
+                    <comment><![CDATA[For local/demo use. For production this should be stored securely.]]></comment>
+                </field>
+
+                <field id="oauth_refresh_token" translate="label" type="textarea" sortOrder="60"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>OAuth Refresh Token</label>
+                    <comment><![CDATA[Generated from OAuth Playground using the Google account that has access to the GA4 property.]]></comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

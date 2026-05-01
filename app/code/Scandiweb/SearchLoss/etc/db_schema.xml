@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+
+    <table name="scandiweb_searchloss_ga4_term" resource="default" engine="innodb" comment="Search Loss GA4 Term Metrics">
+        <column xsi:type="int" name="entity_id" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="date" name="report_date" nullable="false" comment="Report Date"/>
+        <column xsi:type="varchar" name="search_term" nullable="false" length="255" comment="Search Term"/>
+        <column xsi:type="int" name="searches" unsigned="true" nullable="false" default="0" comment="Searches"/>
+        <column xsi:type="int" name="product_views" unsigned="true" nullable="false" default="0" comment="Product Views"/>
+        <column xsi:type="int" name="add_to_carts" unsigned="true" nullable="false" default="0" comment="Add To Carts"/>
+        <column xsi:type="int" name="purchases" unsigned="true" nullable="false" default="0" comment="Purchases"/>
+        <column xsi:type="decimal" name="revenue" scale="4" precision="12" nullable="false" default="0.0000" comment="Revenue"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+
+        <constraint xsi:type="unique" referenceId="SCANDIWEB_SEARCHLOSS_GA4_TERM_DATE_TERM">
+            <column name="report_date"/>
+            <column name="search_term"/>
+        </constraint>
+    </table>
+
+    <table name="scandiweb_searchloss_search_event" resource="default" engine="innodb" comment="Search Loss Logged In Search Events">
+        <column xsi:type="int" name="event_id" unsigned="true" nullable="false" identity="true" comment="Event ID"/>
+        <column xsi:type="timestamp" name="searched_at" nullable="false" default="CURRENT_TIMESTAMP" comment="Searched At"/>
+        <column xsi:type="timestamp" name="completed_at" nullable="true" comment="Completed At"/>
+        <column xsi:type="int" name="response_time_ms" unsigned="true" nullable="true" comment="Response Time Milliseconds"/>
+        <column xsi:type="varchar" name="completion_status" nullable="false" length="32" default="started" comment="Completion Status"/>
+        <column xsi:type="varchar" name="request_token" nullable="true" length="64" comment="Request Token"/>
+        <column xsi:type="smallint" name="store_id" unsigned="true" nullable="false" default="0" comment="Store ID"/>
+        <column xsi:type="int" name="customer_id" unsigned="true" nullable="false" comment="Customer ID"/>
+        <column xsi:type="varchar" name="search_term" nullable="false" length="255" comment="Search Term"/>
+        <column xsi:type="int" name="results_count" unsigned="true" nullable="true" comment="Results Count"/>
+        <column xsi:type="varchar" name="source" nullable="false" length="32" default="catalogsearch" comment="Source"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="event_id"/>
+        </constraint>
+
+        <index referenceId="SCANDIWEB_SEARCHLOSS_SEARCH_EVENT_CUSTOMER_TIME" indexType="btree">
+            <column name="customer_id"/>
+            <column name="searched_at"/>
+        </index>
+
+        <index referenceId="SCANDIWEB_SEARCHLOSS_SEARCH_EVENT_TERM" indexType="btree">
+            <column name="search_term"/>
+        </index>
+
+        <index referenceId="SCANDIWEB_SEARCHLOSS_SEARCH_EVENT_STORE_TIME" indexType="btree">
+            <column name="store_id"/>
+            <column name="searched_at"/>
+        </index>
+
+        <index referenceId="SCANDIWEB_SEARCHLOSS_SEARCH_EVENT_REQUEST_TOKEN" indexType="btree">
+            <column name="request_token"/>
+        </index>
+    </table>
+
+</schema>

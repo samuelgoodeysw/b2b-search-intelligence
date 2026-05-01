@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <preference for="Scandiweb\SearchLoss\Api\SearchLossInterface"
+                type="Scandiweb\SearchLoss\Model\SearchLoss" />
+
+
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="searchloss_ga4_sync" xsi:type="object">Scandiweb\SearchLoss\Console\Command\Ga4SyncCommand</item>
+                <item name="searchloss_ga4_probe" xsi:type="object">Scandiweb\SearchLoss\Console\Command\Ga4ProbeCommand</item>
+            </argument>
+        </arguments>
+    </type>
+
+</config>

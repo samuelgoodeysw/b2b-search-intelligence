@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Scandiweb_SearchLoss::searchloss"
+             title="Search Loss Audit"
+             module="Scandiweb_SearchLoss"
+             sortOrder="90"
+             parent="Magento_Reports::report"
+             action="searchloss/index/index"
+             resource="Scandiweb_SearchLoss::searchloss"/>
+    </menu>
+</config>

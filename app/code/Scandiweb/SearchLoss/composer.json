@@ -1,0 +1,24 @@
+{
+  "name": "scandiweb/module-search-loss",
+  "description": "Magento search audit and diagnosis module for identifying failed search demand, revenue at risk, and catalogue/search fixes.",
+  "type": "magento2-module",
+  "version": "0.1.0",
+  "license": [
+    "proprietary"
+  ],
+  "require": {
+    "php": "^8.1 || ^8.2 || ^8.3 || ^8.4",
+    "magento/framework": "*",
+    "magento/module-search": "*",
+    "magento/module-catalog": "*",
+    "magento/module-sales": "*"
+  },
+  "autoload": {
+    "files": [
+      "registration.php"
+    ],
+    "psr-4": {
+      "Scandiweb\\SearchLoss\\": ""
+    }
+  }
+}
