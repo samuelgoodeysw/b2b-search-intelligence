@@ -471,7 +471,7 @@ function b2bStatusClass(string $status): string
                 <?php if (!empty($events)): ?>
                     <div class="b2b-panel-actions">
                         <button type="button" class="b2b-button" id="b2b-export-current">Export current view</button>
-                        <button type="button" class="b2b-button" id="b2b-export-unresolved">Export unresolved</button>
+                        <button type="button" class="b2b-button" id="b2b-export-unresolved">Export incomplete searches</button>
                     </div>
                 <?php endif; ?>
             </div>
@@ -530,8 +530,9 @@ function b2bStatusClass(string $status): string
 
                 <label class="b2b-checkbox-field">
                     <input id="b2b-unresolved-filter" type="checkbox">
-                    Unresolved only
+                    Incomplete searches only
                 </label>
+                    <span class="b2b-control-help">Only show searches where Magento recorded the search start, but not the completed response.</span>
             </div>
 
             <div class="b2b-table-meta" id="b2b-visible-count"></div>
@@ -681,7 +682,7 @@ function b2bStatusClass(string $status): string
         var visibleCount = document.getElementById("b2b-visible-count");
 
         var exportCurrent = document.getElementById("b2b-export-current") || findButtonByText("Export current view");
-        var exportUnresolved = document.getElementById("b2b-export-unresolved") || findButtonByText("Export unresolved");
+        var exportUnresolved = document.getElementById("b2b-export-unresolved") || findButtonByText("Export incomplete searches");
 
         var tbody = document.getElementById("b2b-search-table-body");
         if (!tbody) {
@@ -718,9 +719,7 @@ function b2bStatusClass(string $status): string
 
                 if (!row.dataset.unresolved) {
                     row.dataset.unresolved = (
-                        combinedStatus.indexOf("no later matching") !== -1 ||
-                        combinedStatus.indexOf("zero result") !== -1 ||
-                        combinedStatus.indexOf("completion not recorded") !== -1
+                        row.dataset.lifecycle.indexOf("completion not recorded") !== -1
                     ) ? "1" : "0";
                 }
             });
@@ -884,7 +883,7 @@ function b2bStatusClass(string $status): string
             var url = URL.createObjectURL(blob);
 
             link.href = url;
-            link.download = onlyUnresolved ? "b2b-search-intelligence-unresolved.csv" : "b2b-search-intelligence-current-view.csv";
+            link.download = onlyUnresolved ? "b2b-search-intelligence-incomplete-searches.csv" : "b2b-search-intelligence-current-view.csv";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
