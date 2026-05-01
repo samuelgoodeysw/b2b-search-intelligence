@@ -111,7 +111,7 @@ function b2bStatusClass(string $status): string
 
 .b2b-actions-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(180px, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 12px;
     margin: 0 0 18px;
     padding: 0;
@@ -122,13 +122,14 @@ function b2bStatusClass(string $status): string
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
-    padding: 18px 20px;
+    padding: 18px 16px;
     box-shadow: 0 8px 20px rgba(15, 23, 42, .05);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
+    min-width: 0;
 }
 
 .b2b-action-priority {
@@ -137,10 +138,10 @@ function b2bStatusClass(string $status): string
 
 .b2b-action-card h3 {
     margin: 0 0 12px;
-    color: #475569;
+    color: #334155;
     font-size: 13px;
     font-weight: 800;
-    line-height: 1.35;
+    line-height: 1.25;
 }
 
 .b2b-action-card strong {
@@ -274,6 +275,66 @@ function b2bStatusClass(string $status): string
         grid-template-columns: repeat(3, minmax(130px, 1fr));
     }
 }
+
+.b2b-tooltip-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: relative;
+}
+
+.b2b-tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: help;
+}
+
+.b2b-tooltip-bubble {
+    display: none;
+    position: absolute;
+    z-index: 100;
+    left: 50%;
+    top: calc(100% + 10px);
+    transform: translateX(-50%);
+    width: 320px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, .22);
+    text-align: left;
+}
+
+.b2b-tooltip-label:hover .b2b-tooltip-bubble {
+    display: block;
+}
+
+.b2b-potential-value strong {
+    display: block;
+    color: #0f172a;
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+
+.b2b-muted {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
 </style>
 
 <div class="b2b-search-intelligence">
@@ -289,8 +350,18 @@ function b2bStatusClass(string $status): string
         <section class="b2b-actions-grid" aria-label="B2B Search Intelligence KPI cards">
             <?php foreach ($topActions as $action): ?>
                 <article class="b2b-action-card">
-                    <h3><?= $block->escapeHtml($action['label']) ?></h3>
-                    <strong><?= (int)$action['count'] ?></strong>
+                    <h3>
+                            <?php if (($action['label'] ?? '') === 'Potential value'): ?>
+                                <span class="b2b-tooltip-label">
+                                    Potential value
+                                    <span class="b2b-tooltip-icon">?</span>
+                                    <span class="b2b-tooltip-bubble">Formula: unresolved logged-in search opportunity x this customer's average historical item value. Customer average item value is based on previous order item revenue divided by previous order item quantity. This is directional and is not guaranteed lost revenue.</span>
+                                </span>
+                            <?php else: ?>
+                                <?= $block->escapeHtml($action['label']) ?>
+                            <?php endif; ?>
+                        </h3>
+                    <strong><?= $block->escapeHtml((string)($action['displayValue'] ?? (string)(int)$action['count'])) ?></strong>
                 </article>
             <?php endforeach; ?>
         </section>
@@ -322,6 +393,13 @@ function b2bStatusClass(string $status): string
                             <th>Response</th>
                             <th>Results</th>
                             <th>Lifecycle</th>
+                            <th class="b2b-potential-value-header">
+                                <span class="b2b-tooltip-label">
+                                    Potential value
+                                    <span class="b2b-tooltip-icon">?</span>
+                                    <span class="b2b-tooltip-bubble">Formula: unresolved logged-in search opportunity x this customer's average historical item value. Customer average item value is based on previous order item revenue divided by previous order item quantity. This is directional and is not guaranteed lost revenue.</span>
+                                </span>
+                            </th>
                             <th>Follow-through</th>
                             <th>Matched item</th>
                         </tr>

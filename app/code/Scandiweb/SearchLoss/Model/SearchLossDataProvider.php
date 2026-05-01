@@ -159,7 +159,7 @@ class SearchLossDataProvider
             }
         }
 
-        $summary['potentialValue'] = round($summary['potentialValue'], 2);
+        $summary['potentialValue'] = round((float)$summary['potentialValue'], 2);
         $summary['potentialValueFormatted'] = $this->formatCurrency($summary['potentialValue']);
 
         return $summary;
