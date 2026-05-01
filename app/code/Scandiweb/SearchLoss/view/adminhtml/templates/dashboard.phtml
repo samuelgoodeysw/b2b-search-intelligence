@@ -99,13 +99,14 @@ function b2bStatusClass(string $status): string
     grid-template-columns: repeat(5, minmax(180px, 1fr));
     gap: 12px;
     margin: 0 0 18px;
+    padding: 0;
 }
 
 .b2b-action-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
-    padding: 16px 20px;
+    padding: 18px 20px;
     box-shadow: 0 8px 20px rgba(15, 23, 42, .05);
 }
 
@@ -114,27 +115,24 @@ function b2bStatusClass(string $status): string
 }
 
 .b2b-action-card h3 {
-    margin: 0 0 8px;
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 750;
+    margin: 0 0 12px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 800;
     line-height: 1.35;
 }
 
 .b2b-action-card strong {
     display: block;
     color: #0f172a;
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 900;
     letter-spacing: -.03em;
-    margin-bottom: 8px;
+    margin: 0;
 }
 
 .b2b-action-card p {
-    margin: 0;
-    color: #64748b;
-    font-size: 13px;
-    line-height: 1.45;
+    display: none;
 }
 
 .b2b-panel {
@@ -264,7 +262,7 @@ function b2bStatusClass(string $status): string
 <?php if (!empty($topActions)): ?>
         <section class="b2b-panel" style="margin-bottom:18px;">
             <div class="b2b-panel-header">
-                <h2>KPIs</h2>
+                
                 <p></p>
             </div>
             <div class="b2b-actions-grid" style="padding:18px 20px;">
@@ -272,7 +270,6 @@ function b2bStatusClass(string $status): string
                     <article class="b2b-action-card">
 <h3><?= $block->escapeHtml($action['label']) ?></h3>
                         <strong><?= (int)$action['count'] ?></strong>
-                        <p><?= $block->escapeHtml($action['summary']) ?></p>
                     </article>
                 <?php endforeach; ?>
         </section>

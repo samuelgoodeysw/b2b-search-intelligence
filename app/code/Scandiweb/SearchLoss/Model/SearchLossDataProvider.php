@@ -76,13 +76,13 @@ class SearchLossDataProvider
 
         $actions = [
             'completion_not_recorded' => [
-                'label' => 'Searches that may not have completed',
+                'label' => 'Potential incomplete searches',
                 'count' => 0,
                 'priority' => 'High',
                 'summary' => 'Magento received the search request, but no completed response was recorded.',
             ],
             'zero_results' => [
-                'label' => 'Completed searches with zero results',
+                'label' => 'Zero-result customer searches',
                 'count' => 0,
                 'priority' => 'High',
                 'summary' => 'The customer searched while logged in, Magento completed the response, but returned zero results.',
@@ -94,19 +94,19 @@ class SearchLossDataProvider
                 'summary' => 'Magento completed the search response, but server-side response time was high.',
             ],
             'unresolved_intent' => [
-                'label' => 'No later matching cart or order',
+                'label' => 'No matching cart or order',
                 'count' => 0,
                 'priority' => 'High',
                 'summary' => 'No later cart or order item clearly matched the logged-in customer search.',
             ],
             'cart_followthrough' => [
-                'label' => 'Searches that led to cart activity',
+                'label' => 'Searches leading to cart',
                 'count' => 0,
                 'priority' => 'Positive signal',
                 'summary' => 'A later cart item appears to match the logged-in customer search.',
             ],
             'order_followthrough' => [
-                'label' => 'Searches that led to orders',
+                'label' => 'Searches leading to orders',
                 'count' => 0,
                 'priority' => 'Positive signal',
                 'summary' => 'A later order item appears to match the logged-in customer search.',
