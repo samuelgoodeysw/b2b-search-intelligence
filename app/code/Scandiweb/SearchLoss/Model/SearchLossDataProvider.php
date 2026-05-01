@@ -19,7 +19,7 @@ class SearchLossDataProvider
     {
         $events = $this->getLoggedInSearchIntelligence();
 
-        return [
+        $dashboardData = [
             [
                 'key' => 'summary',
                 'value' => $this->getSummary($events),
@@ -29,6 +29,7 @@ class SearchLossDataProvider
                 'value' => $events,
             ],
         ];
+        return $this->applyIncompleteSearchPotentialSummary($dashboardData);
     }
 
     public function getLoggedInSearchIntelligence(): array
@@ -518,4 +519,70 @@ class SearchLossDataProvider
     {
         return '$' . number_format($value, 0);
     }
+
+
+    /**
+     * Refine headline value to the specific Universal Group money signal:
+     * searches that started but never recorded a completed Magento response.
+     */
+    private function applyIncompleteSearchPotentialSummary(array $dashboardData): array
+    {
+        $rows = [];
+        $summaryIndex = null;
+
+        foreach ($dashboardData as $index => $block) {
+            if (($block['key'] ?? null) === 'loggedInSearchIntelligence') {
+                $rows = is_array($block['value'] ?? null) ? $block['value'] : [];
+            }
+
+            if (($block['key'] ?? null) === 'summary') {
+                $summaryIndex = $index;
+            }
+        }
+
+        if ($summaryIndex === null) {
+            return $dashboardData;
+        }
+
+        $incompleteSearches = 0;
+        $incompleteSearchValue = 0.0;
+
+        foreach ($rows as $row) {
+            $completionStatus = strtolower((string)($row['completionStatus'] ?? ''));
+            $lifecycleStatus = strtolower((string)($row['lifecycleStatus'] ?? ''));
+            $completedAt = $row['completedAt'] ?? null;
+
+            $isCompletionNotRecorded =
+                $completionStatus === 'started'
+                || $completedAt === null
+                || strpos($lifecycleStatus, 'completion not recorded') !== false;
+
+            if (!$isCompletionNotRecorded) {
+                continue;
+            }
+
+            $incompleteSearches++;
+            $rowValue = (float)($row['potentialValue'] ?? 0);
+
+            if ($rowValue <= 0 && isset($row['customerAverageItemValue'])) {
+                $rowValue = (float)$row['customerAverageItemValue'];
+            }
+
+            $incompleteSearchValue += $rowValue;
+        }
+
+        $incompleteSearchValue = round($incompleteSearchValue, 2);
+        $formattedValue = '$' . number_format($incompleteSearchValue, 0);
+
+        $dashboardData[$summaryIndex]['value']['incompleteSearches'] = $incompleteSearches;
+        $dashboardData[$summaryIndex]['value']['incompleteSearchPotentialValue'] = $incompleteSearchValue;
+        $dashboardData[$summaryIndex]['value']['incompleteSearchPotentialValueFormatted'] = $formattedValue;
+
+        // Keep the existing frontend contract, but make the headline value specific to incomplete searches.
+        $dashboardData[$summaryIndex]['value']['potentialValue'] = $incompleteSearchValue;
+        $dashboardData[$summaryIndex]['value']['potentialValueFormatted'] = $formattedValue;
+
+        return $dashboardData;
+    }
+
 }

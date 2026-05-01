@@ -441,9 +441,9 @@ function b2bStatusClass(string $status): string
             <?php foreach ($topActions as $action): ?>
                 <article class="b2b-action-card">
                     <h3>
-                            <?php if (($action['label'] ?? '') === 'Potential value'): ?>
+                            <?php if (($action['label'] ?? '') === 'Incomplete search value'): ?>
                                 <span class="b2b-tooltip-label">
-                                    Potential value
+                                    Incomplete search value
                                     <span class="b2b-tooltip-icon">?</span>
                                     <span class="b2b-tooltip-bubble">Unresolved searches × customer average item value. Directional only, not guaranteed lost revenue.</span>
                                 </span>
