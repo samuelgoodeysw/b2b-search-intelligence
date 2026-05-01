@@ -98,7 +98,7 @@ function b2bStatusClass(string $status): string
     display: grid;
     grid-template-columns: repeat(5, minmax(180px, 1fr));
     gap: 12px;
-    margin-bottom: 18px;
+    margin: 0 0 18px;
 }
 
 .b2b-action-card {
@@ -265,7 +265,7 @@ function b2bStatusClass(string $status): string
         <section class="b2b-panel" style="margin-bottom:18px;">
             <div class="b2b-panel-header">
                 <h2>KPIs</h2>
-                <p>Key signals based on logged-in customer search events.</p>
+                <p></p>
             </div>
             <div class="b2b-actions-grid" style="padding:18px 20px;">
                 <?php foreach ($topActions as $action): ?>
@@ -275,7 +275,6 @@ function b2bStatusClass(string $status): string
                         <p><?= $block->escapeHtml($action['summary']) ?></p>
                     </article>
                 <?php endforeach; ?>
-            </div>
         </section>
     <?php endif; ?>
 
