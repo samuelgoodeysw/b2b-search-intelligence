@@ -103,11 +103,17 @@ function b2bStatusClass(string $status): string
 }
 
 .b2b-action-card {
+    min-height: 132px;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
     padding: 18px 20px;
     box-shadow: 0 8px 20px rgba(15, 23, 42, .05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .b2b-action-priority {
@@ -125,7 +131,7 @@ function b2bStatusClass(string $status): string
 .b2b-action-card strong {
     display: block;
     color: #0f172a;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 900;
     letter-spacing: -.03em;
     margin: 0;
@@ -258,22 +264,17 @@ function b2bStatusClass(string $status): string
             and whether the customer later added or ordered anything matching that search.
         </p>
     </section>
-
-<?php if (!empty($topActions)): ?>
-        <section class="b2b-panel" style="margin-bottom:18px;">
-            <div class="b2b-panel-header">
-                
-                <p></p>
-            </div>
-            <div class="b2b-actions-grid" style="padding:18px 20px;">
-                <?php foreach ($topActions as $action): ?>
-                    <article class="b2b-action-card">
-<h3><?= $block->escapeHtml($action['label']) ?></h3>
-                        <strong><?= (int)$action['count'] ?></strong>
-                    </article>
-                <?php endforeach; ?>
+    <?php if (!empty($topActions)): ?>
+        <section class="b2b-actions-grid" aria-label="B2B Search Intelligence KPI cards">
+            <?php foreach ($topActions as $action): ?>
+                <article class="b2b-action-card">
+                    <h3><?= $block->escapeHtml($action['label']) ?></h3>
+                    <strong><?= (int)$action['count'] ?></strong>
+                </article>
+            <?php endforeach; ?>
         </section>
     <?php endif; ?>
+
 
     <section class="b2b-panel">
         <div class="b2b-panel-header">
