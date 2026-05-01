@@ -24,7 +24,7 @@ class Index extends Action
     {
         $resultPage = $this->resultPageFactory->create();
         $resultPage->setActiveMenu('Scandiweb_SearchLoss::searchloss');
-        $resultPage->getConfig()->getTitle()->prepend(__('Search Loss Audit'));
+        $resultPage->getConfig()->getTitle()->prepend(__('B2B Search Intelligence'));
 
         return $resultPage;
     }

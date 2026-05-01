@@ -5,7 +5,7 @@
         <resources>
             <resource id="Magento_Backend::admin">
                 <resource id="Magento_Reports::report">
-                    <resource id="Scandiweb_SearchLoss::searchloss" title="Search Loss Audit" sortOrder="90"/>
+                    <resource id="Scandiweb_SearchLoss::searchloss" title="B2B Search Intelligence" sortOrder="90"/>
                 </resource>
             </resource>
         </resources>

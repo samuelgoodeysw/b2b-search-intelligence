@@ -3,7 +3,7 @@
         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
     <menu>
         <add id="Scandiweb_SearchLoss::searchloss"
-             title="Search Loss Audit"
+             title="B2B Search Intelligence"
              module="Scandiweb_SearchLoss"
              sortOrder="90"
              parent="Magento_Reports::report"
