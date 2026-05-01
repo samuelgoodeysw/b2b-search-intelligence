@@ -347,6 +347,84 @@ function b2bStatusClass(string $status): string
     min-height: 34px;
 }
 
+
+.b2b-panel-actions .b2b-button,
+.b2b-button {
+    min-height: 36px;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 8px 13px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, .08);
+}
+
+.b2b-panel-actions .b2b-button:hover,
+.b2b-button:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.b2b-controls {
+    display: grid;
+    grid-template-columns: minmax(280px, 2fr) repeat(3, minmax(170px, 1fr)) minmax(140px, auto);
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+    align-items: end;
+}
+
+.b2b-control-field label {
+    display: block;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.b2b-control-field input,
+.b2b-control-field select {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 7px 10px;
+    color: #0f172a;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+.b2b-checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.b2b-table-meta {
+    padding: 10px 20px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+@media (max-width: 1500px) {
+    .b2b-controls {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+}
+
 </style>
 
 <div class="b2b-search-intelligence">
@@ -404,6 +482,59 @@ function b2bStatusClass(string $status): string
                 No logged-in customer search events have been captured yet.
             </div>
         <?php else: ?>
+            <div class="b2b-controls">
+                <div class="b2b-control-field">
+                    <label for="b2b-search-filter">Search</label>
+                    <input id="b2b-search-filter" type="search" placeholder="Search customer, term, matched product, or SKU">
+                </div>
+
+                <div class="b2b-control-field">
+                    <label for="b2b-lifecycle-filter">Lifecycle</label>
+                    <select id="b2b-lifecycle-filter">
+                        <option value="">All lifecycle statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="completed, zero results">Completed, zero results</option>
+                        <option value="completed slowly">Completed slowly</option>
+                        <option value="search started, completion not recorded">Search started, completion not recorded</option>
+                        <option value="needs review">Needs review</option>
+                    </select>
+                </div>
+
+                <div class="b2b-control-field">
+                    <label for="b2b-follow-filter">Follow-through</label>
+                    <select id="b2b-follow-filter">
+                        <option value="">All follow-through statuses</option>
+                        <option value="matching cart item found">Matching cart item found</option>
+                        <option value="matching order item found">Matching order item found</option>
+                        <option value="no later matching cart/order found">No later matching cart/order found</option>
+                        <option value="needs review">Needs review</option>
+                    </select>
+                </div>
+
+                <div class="b2b-control-field">
+                    <label for="b2b-sort-select">Sort by</label>
+                    <select id="b2b-sort-select">
+                        <option value="started_desc">Newest search first</option>
+                        <option value="started_asc">Oldest search first</option>
+                        <option value="response_desc">Response time high-low</option>
+                        <option value="response_asc">Response time low-high</option>
+                        <option value="results_desc">Results high-low</option>
+                        <option value="results_asc">Results low-high</option>
+                        <option value="customer_asc">Customer A-Z</option>
+                        <option value="lifecycle_asc">Lifecycle A-Z</option>
+                        <option value="follow_asc">Follow-through A-Z</option>
+                        <option value="unresolved_first">Unresolved first</option>
+                    </select>
+                </div>
+
+                <label class="b2b-checkbox-field">
+                    <input id="b2b-unresolved-filter" type="checkbox">
+                    Unresolved only
+                </label>
+            </div>
+
+            <div class="b2b-table-meta" id="b2b-visible-count"></div>
+
             <div class="b2b-table-wrap">
                 <table class="b2b-table">
                     <thead>
